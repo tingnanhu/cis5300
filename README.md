@@ -30,7 +30,7 @@ cis5300/
 ├── reports/                    # Project reports and proposals
 ├── simple-baseline.py          # Simple baseline implementation
 ├── simple-baseline.md          # Simple baseline documentation
-├── strong_baseline.py          # Strong baseline implementation (BERT)
+├── strong_baseline.py          # Strong baseline implementation (DistilBERT)
 ├── strong-baseline.md          # Strong baseline documentation
 ├── score.py                    # Evaluation script
 ├── scoring.md                  # Evaluation metric documentation
@@ -115,7 +115,7 @@ python simple-baseline.py cleaned/train_split.csv cleaned/test_split.csv results
 
 **Implementation**: `strong_baseline.py`
 
-A transformer-based baseline using fine-tuned BERT for toxic comment classification. The model uses focal loss to handle class imbalance and supports hyperparameter tuning.
+A transformer-based baseline using fine-tuned DistilBERT (a distilled version of BERT) for toxic comment classification. DistilBERT is faster and smaller than BERT while maintaining most of its performance. The model uses focal loss to handle class imbalance and supports hyperparameter tuning.
 
 **Usage**:
 ```bash
@@ -278,7 +278,7 @@ python score.py \
 
 - **`simple-baseline.py`**: Implementation of majority class baseline
 - **`simple-baseline.md`**: Detailed documentation for simple baseline
-- **`strong_baseline.py`**: Implementation of BERT-based strong baseline
+- **`strong_baseline.py`**: Implementation of DistilBERT-based strong baseline
 - **`strong-baseline.md`**: Detailed documentation for strong baseline including usage, hyperparameters, and checkpointing
 - **`score.py`**: Evaluation script for computing Mean AUC-ROC and other metrics
 - **`scoring.md`**: Documentation explaining the evaluation metric

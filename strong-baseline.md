@@ -1,13 +1,13 @@
-# Strong Baseline: BERT for Toxic Comment Classification
+# Strong Baseline: DistilBERT for Toxic Comment Classification
 
 ## Overview
 
-The strong baseline uses **BERT (Bidirectional Encoder Representations from Transformers)** for multi-label toxic comment classification. This transformer-based model fine-tunes a pre-trained BERT model to classify comments into six toxic categories: `toxic`, `severe_toxic`, `obscene`, `threat`, `insult`, and `identity_hate`. The model uses focal loss to handle class imbalance and supports hyperparameter tuning.
+The strong baseline uses **DistilBERT (a distilled version of BERT)** for multi-label toxic comment classification. DistilBERT is faster and smaller than BERT while maintaining most of its performance. This transformer-based model fine-tunes a pre-trained DistilBERT model to classify comments into six toxic categories: `toxic`, `severe_toxic`, `obscene`, `threat`, `insult`, and `identity_hate`. The model uses focal loss to handle class imbalance and supports hyperparameter tuning.
 
 ## How It Works
 
-1. **Preprocessing**: Text comments are tokenized using BERT tokenizer and truncated/padded to a fixed length (default: 256 tokens)
-2. **Model Architecture**: Fine-tunes a pre-trained BERT model (`bert-base-uncased` by default) with a classification head for multi-label classification
+1. **Preprocessing**: Text comments are tokenized using DistilBERT tokenizer and truncated/padded to a fixed length (default: 256 tokens)
+2. **Model Architecture**: Fine-tunes a pre-trained DistilBERT model (`distilbert-base-uncased` by default) with a classification head for multi-label classification
 3. **Training**: Uses focal loss to handle class imbalance, AdamW optimizer with linear warmup scheduler, and gradient clipping
 4. **Prediction**: Outputs probability scores (0.0 to 1.0) for each of the six toxic categories
 
@@ -83,13 +83,14 @@ This will resume training from the latest checkpoint in the specified directory.
 - `--batch-size N`: Batch size for training (default: 16)
 - `--learning-rate FLOAT`: Learning rate for optimizer (default: 2e-5)
 - `--max-length N`: Maximum sequence length for tokenization (default: 256)
-- `--model-name STRING`: Pre-trained model name (default: 'bert-base-uncased')
-  - Options: 'bert-base-uncased', 'bert-large-uncased', etc.
+- `--model-name STRING`: Pre-trained model name (default: 'distilbert-base-uncased')
+  - Options: 'distilbert-base-uncased', 'distilbert-base-cased', etc.
 - `--save-dir PATH`: Directory to save checkpoints (default: 'checkpoints')
 - `--save-best`: Save the best model based on dev set performance (requires --dev-file)
 - `--resume PATH`: Resume training from checkpoints in the specified directory
 - `--tune`: Perform hyperparameter tuning (requires --dev-file)
-  - Searches over: learning rates [1e-5, 2e-5, 3e-5], batch sizes [8, 16, 32], epochs [2, 3]
+  - Searches over: learning rates [2e-5, 5e-5], dropout rates [0.1, 0.3]
+  - Uses fixed batch_size=32 and epochs=5 during tuning
 
 ### Examples
 
@@ -138,7 +139,7 @@ python strong_baseline.py \
     cleaned/train_split.csv \
     cleaned/test_split.csv \
     results/strong_baseline_predictions.csv \
-    --save-dir checkpoints/bert_baseline \
+    --save-dir checkpoints/distilbert_baseline \
     --save-best \
     --dev-file cleaned/dev_split.csv
 ```
@@ -172,11 +173,12 @@ python strong_baseline.py \
 ## Model Architecture
 
 ### Base Model
-- **Pre-trained Model**: BERT-base-uncased (default)
-  - 12 transformer layers
+- **Pre-trained Model**: DistilBERT-base-uncased (default)
+  - 6 transformer layers (distilled from BERT's 12 layers)
   - 768 hidden dimensions
-  - 110M parameters
-- **Classification Head**: Linear layer mapping BERT output to 6 labels (one per toxic category)
+  - 66M parameters (60% of BERT-base)
+- **Classification Head**: Linear layer mapping DistilBERT output to 6 labels (one per toxic category)
+- **Dropout Rate**: Configurable via `seq_classif_dropout` (default: 0.2, tuned via --tune)
 
 ### Loss Function
 - **Focal Loss**: Modified binary cross-entropy that focuses on hard examples
@@ -196,28 +198,37 @@ When running the script, you'll see output like:
 
 ```
 Using device: cuda
-Loading model: bert-base-uncased...
+Loading model: distilbert-base-uncased with dropout 0.2...
 Epoch 1/3...
 Training: 100%|████████████| 7979/7979 [15:23<00:00,  8.65it/s, loss=0.234]
   Average loss: 0.2156
+  Macro-F1:      0.623456
+  Macro-Precision: 0.712345
+  Macro-Recall:  0.556789
   Dev AUC-ROC: 0.972350
-  -> New best model!
+  -> New best dev score!
   Saved checkpoint: checkpoints/checkpoint_epoch_1.pt
 
 Epoch 2/3...
 Training: 100%|████████████| 7979/7979 [15:20<00:00,  8.67it/s, loss=0.189]
   Average loss: 0.1823
+  Macro-F1:      0.645678
+  Macro-Precision: 0.723456
+  Macro-Recall:  0.578901
   Dev AUC-ROC: 0.978123
-  -> New best model!
+  -> New best dev score!
   Saved checkpoint: checkpoints/checkpoint_epoch_2.pt
 
 Epoch 3/3...
 Training: 100%|████████████| 7979/7979 [15:18<00:00,  8.69it/s, loss=0.165]
   Average loss: 0.1567
+  Macro-F1:      0.656789
+  Macro-Precision: 0.734567
+  Macro-Recall:  0.589012
   Dev AUC-ROC: 0.978456
   Saved checkpoint: checkpoints/checkpoint_epoch_3.pt
 
-Restoring best model (AUC-ROC=0.978456)
+Restoring best model (dev AUC-ROC: 0.978456)
 Saved best model to checkpoints/best_model.pt
 Predicting: 100%|████████████| 1995/1995 [02:15<00:00, 14.75it/s]
 Done! Saved to results/strong_baseline_predictions.csv
@@ -232,12 +243,14 @@ python score.py cleaned/test_split.csv results/strong_baseline_predictions.csv
 ```
 
 The evaluation script will output:
-- **Mean AUC-ROC**: Primary metric (typically ~0.98-0.99 for BERT baseline)
+- **Mean AUC-ROC**: Primary metric (typically ~0.98-0.99 for DistilBERT baseline)
 - **Macro-F1**: Macro-averaged F1 score
 - **Macro-Precision**: Macro-averaged precision
 - **Macro-Recall**: Macro-averaged recall
 - **Individual AUC-ROC scores**: Per-label scores
 - **Metrics JSON file**: All metrics saved to `results/strong_baseline_predictions_metrics.json`
+
+Note: The model's `evaluate_model` function also prints Macro-F1, Macro-Precision, and Macro-Recall during training/evaluation.
 
 ### Example Evaluation Output
 
@@ -262,24 +275,28 @@ Metrics saved to results/strong_baseline_predictions_metrics.json
 
 ## Expected Performance
 
-The BERT baseline typically achieves a **Mean AUC-ROC score around 0.98-0.99**, which represents state-of-the-art performance for this task. This is because:
+The DistilBERT baseline typically achieves a **Mean AUC-ROC score around 0.98-0.99**, which represents state-of-the-art performance for this task. This is because:
 
-1. **Pre-trained Representations**: BERT provides rich contextualized word embeddings learned from large-scale text data
+1. **Pre-trained Representations**: DistilBERT provides rich contextualized word embeddings learned from large-scale text data (distilled from BERT)
 2. **Fine-tuning**: The model is fine-tuned on the specific toxic comment classification task
 3. **Focal Loss**: Effectively handles the severe class imbalance in the dataset
 4. **Multi-label Architecture**: Properly models the multi-label nature of the task
+5. **Efficiency**: DistilBERT is faster and more memory-efficient than BERT while maintaining similar performance
 
 ## Hyperparameter Tuning
 
 When using `--tune`, the script searches over:
 
-- **Learning Rates**: [1e-5, 2e-5, 3e-5]
-- **Batch Sizes**: [8, 16, 32]
-- **Epochs**: [2, 3]
+- **Learning Rates**: [2e-5, 5e-5]
+- **Dropout Rates**: [0.1, 0.3]
 
-Total combinations: 3 × 3 × 2 = 18 configurations
+Total combinations: 2 × 2 = 4 configurations
 
-The script evaluates each configuration on the dev set and selects the one with the highest AUC-ROC score. This can take several hours depending on your hardware.
+During tuning, the script uses fixed hyperparameters:
+- **Batch Size**: 32
+- **Epochs**: 5
+
+The script evaluates each configuration on the dev set and selects the one with the highest AUC-ROC score. The best learning rate and dropout rate are then used for the final model training.
 
 **Note**: Hyperparameter tuning requires a development set (`--dev-file`).
 
@@ -306,13 +323,13 @@ When using `--save-best`, the script saves:
 - **GPU**: Recommended for training (CUDA-compatible GPU with at least 8GB VRAM)
 - **CPU**: Can run but will be significantly slower
 - **Memory**: At least 16GB RAM recommended
-- **Storage**: ~500MB for model checkpoints, ~1.5GB for pre-trained BERT model
+- **Storage**: ~300MB for model checkpoints, ~500MB for pre-trained DistilBERT model
 
 ### Training Time Estimates
 
-- **Single epoch**: ~15-20 minutes on GPU (batch_size=16, ~128K training examples)
-- **Full training (3 epochs)**: ~45-60 minutes on GPU
-- **Hyperparameter tuning**: ~12-18 hours on GPU (18 configurations)
+- **Single epoch**: ~10-15 minutes on GPU (batch_size=16, ~128K training examples)
+- **Full training (3 epochs)**: ~30-45 minutes on GPU
+- **Hyperparameter tuning**: ~3-5 hours on GPU (4 configurations, 5 epochs each)
 
 ## Limitations
 
@@ -342,7 +359,7 @@ When using `--save-best`, the script saves:
 ### Slow Training
 - Ensure CUDA is available: `python -c "import torch; print(torch.cuda.is_available())"`
 - Reduce batch size if causing memory issues
-- Use a smaller model (e.g., DistilBERT - requires code modification)
+- DistilBERT is already optimized for speed; consider reducing max_length if needed
 
 ### Poor Performance
 - Try hyperparameter tuning with `--tune`
@@ -354,9 +371,11 @@ When using `--save-best`, the script saves:
 
 1. **BERT Paper**: Devlin, J., et al. (2018). "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding". *NAACL-HLT 2019*.
 
-2. **Focal Loss**: Lin, T. Y., et al. (2017). "Focal Loss for Dense Object Detection". *ICCV 2017*.
+2. **DistilBERT Paper**: Sanh, V., et al. (2019). "DistilBERT, a distilled version of BERT: smaller, faster, cheaper and lighter". *NeurIPS EMC2 Workshop*.
 
-3. **Transformers Library**: Hugging Face Transformers - https://huggingface.co/transformers/
+3. **Focal Loss**: Lin, T. Y., et al. (2017). "Focal Loss for Dense Object Detection". *ICCV 2017*.
 
-4. **Kaggle Competition**: [Jigsaw Toxic Comment Classification Challenge](https://www.kaggle.com/competitions/jigsaw-toxic-comment-classification-challenge)
+4. **Transformers Library**: Hugging Face Transformers - https://huggingface.co/transformers/
+
+5. **Kaggle Competition**: [Jigsaw Toxic Comment Classification Challenge](https://www.kaggle.com/competitions/jigsaw-toxic-comment-classification-challenge)
 
