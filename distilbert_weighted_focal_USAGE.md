@@ -1,6 +1,6 @@
 # DistilBERT Focal Loss Model - Usage Guide
 
-This guide explains how to use the `distilbert_focal_6_seed.py` script for toxic comment classification using DistilBERT with focal loss.
+This guide explains how to use the `distilbert_weighted_focal.py` script for toxic comment classification using DistilBERT with focal loss.
 
 ## What This Script Does
 
@@ -25,7 +25,7 @@ The model uses **focal loss** to handle class imbalance, which helps the model f
 The script requires three positional arguments:
 
 ```bash
-python distilbert_focal_6_seed.py <train_file> <test_file> <output_file>
+python distilbert_weighted_focal.py <train_file> <test_file> <output_file>
 ```
 
 - `train_file`: Path to your training CSV file (must contain `comment_text` column and all six label columns)
@@ -35,7 +35,7 @@ python distilbert_focal_6_seed.py <train_file> <test_file> <output_file>
 ### Example: Basic Training
 
 ```bash
-python distilbert_focal_6_seed.py \
+python distilbert_weighted_focal.py \
     cleaned/train_split.csv \
     cleaned/test_split.csv \
     results/predictions.csv
@@ -75,7 +75,7 @@ This will:
 When you have a development set and want to find the best hyperparameters automatically:
 
 ```bash
-python distilbert_focal_6_seed.py \
+python distilbert_weighted_focal.py \
     cleaned/train_split.csv \
     cleaned/test_split.csv \
     results/predictions.csv \
@@ -104,7 +104,7 @@ python distilbert_focal_6_seed.py \
 When you want to set hyperparameters directly (or use defaults):
 
 ```bash
-python distilbert_focal_6_seed.py \
+python distilbert_weighted_focal.py \
     cleaned/train_split.csv \
     cleaned/test_split.csv \
     results/predictions.csv \
@@ -142,7 +142,7 @@ python distilbert_focal_6_seed.py \
 ## Complete Example: Full Training with Dev Evaluation
 
 ```bash
-python distilbert_focal_6_seed.py \
+python distilbert_weighted_focal.py \
     cleaned/train_split.csv \
     cleaned/test_split.csv \
     results/final_predictions.csv \

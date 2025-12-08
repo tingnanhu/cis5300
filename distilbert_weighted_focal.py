@@ -26,6 +26,7 @@ import random
 from sklearn.metrics import f1_score, precision_score, recall_score
 import logging
 
+
 # Dataset
 class ToxicCommentDataset(Dataset):
     """Dataset class for toxic comment classification."""
@@ -55,11 +56,13 @@ class ToxicCommentDataset(Dataset):
             'labels': torch.FloatTensor(label)
         }
 
+
 # Utilities
 def preprocess_text(text):
     if pd.isna(text):
         return ""
     return str(text).strip()
+
 
 def load_data(filepath):
     try:
@@ -80,6 +83,7 @@ def load_data(filepath):
                 warn_bad_lines=True,
                 engine='python'
             )
+
 
 # Focal loss with per-class alpha and gamma
 def focal_loss_with_logits(logits, targets, alpha=0.25, gamma=2.0, reduction='mean'):
@@ -117,6 +121,7 @@ def focal_loss_with_logits(logits, targets, alpha=0.25, gamma=2.0, reduction='me
     else:
         return loss
 
+
 # Initialize bias with pi clipping
 def initialize_bias(model, label_counts, num_samples, pi_min=1e-4, pi_max=0.9):
     """
@@ -124,7 +129,7 @@ def initialize_bias(model, label_counts, num_samples, pi_min=1e-4, pi_max=0.9):
     b = -log((1 - pi) / pi)
     pi_min, pi_max: clipping bounds for empirical positive rates
     """
-   
+
     # Compute positive rate for each class and clip to avoid extreme values
     pi = torch.tensor(label_counts / num_samples, dtype=torch.float32)
     print(pi)
@@ -136,6 +141,7 @@ def initialize_bias(model, label_counts, num_samples, pi_min=1e-4, pi_max=0.9):
             device = model.classifier.bias.device
             model.classifier.bias.copy_(bias_values.to(device))
             print(f"Initialized output bias values: {bias_values.numpy()}", file=sys.stderr)
+
 
 def compute_training_thresholds(
     model, train_df, label_columns, tokenizer, device,
@@ -176,9 +182,9 @@ def compute_training_thresholds(
         except:
             best = 0.5  # fallback
         thresholds.append(best)
-    
+
     thresholds = np.array(thresholds)
-    
+
     if log:
         log("\n--- Optimal Training Thresholds ---")
         for label, t in zip(label_columns, thresholds):
@@ -186,6 +192,7 @@ def compute_training_thresholds(
         log("---------------------------------")
     
     return thresholds
+
 
 # Training
 def train_model(
@@ -309,6 +316,7 @@ def train_model(
 
     return model
 
+
 # Hyperparameter tuning for alpha, gamma, and bias initialization
 def tune_hyperparameters(
     train_df, dev_df, test_df, label_columns, tokenizer, device,
@@ -319,7 +327,7 @@ def tune_hyperparameters(
         - α_max (alpha clipping upper bound)
         - gamma (focal loss gamma)
         - init_bias_flag (whether to run initialize_bias or leave default biases)
-    
+ 
     NOTE: For tuning, the optimal threshold is computed on the TRAINING data 
     and then applied to the DEV data for the final F1 score evaluation.
     """
@@ -486,6 +494,7 @@ def tune_hyperparameters(
 
     return best_params
 
+
 # Evaluation
 def evaluate_model(
     model, df, label_columns, tokenizer, device,
@@ -544,8 +553,8 @@ def evaluate_model(
 
     if thresholds is not None:
         if len(thresholds) != len(label_columns):
-             raise ValueError("Thresholds length must match number of label columns.")
-        
+            raise ValueError("Thresholds length must match number of label columns.")
+    
         # Apply per-class thresholds for binary predictions
         thresholds_array = np.array(thresholds).reshape(1, -1)
         binary_preds = (predictions >= thresholds_array).astype(int)
@@ -617,6 +626,7 @@ def evaluate_model(
     else:
         return macro_f1, np.full(len(label_columns), 0.5)
 
+
 # Predict
 def predict(
     model, test_df, label_columns, tokenizer, device,
@@ -662,7 +672,7 @@ def main():
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-    
+
     parser = argparse.ArgumentParser(
         description=('BERT baseline: DistilBERT for toxic comment classification'))
     parser.add_argument('train_file', help='Path to training data CSV file')
@@ -707,7 +717,7 @@ def main():
                  print(msg, file=sys.stderr)
             logging.info(msg)
         return log
-    
+
     log_file_path = "hparam_tuning.log"
     log = setup_main_log(log_file_path)
 
@@ -742,7 +752,7 @@ def main():
 
         label_counts = train_df[label_columns].sum(axis=0).values
         num_samples = len(train_df)
-        
+    
         # Compute per-class alpha: rare classes get higher alpha (more weight on positive examples)
         positive_rates = label_counts / num_samples
         alpha_per_class = 1.0 - positive_rates
@@ -753,7 +763,7 @@ def main():
         epochs = args.epochs
         dropout_rate = 0.2 
         tokenizer = DistilBertTokenizer.from_pretrained(args.model_name)
-        
+    
         chosen_gamma = 2.0
         pi_min_clip = 1e-4
         pi_max_clip = 0.9
@@ -895,6 +905,7 @@ def main():
         import traceback
         traceback.print_exc()
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
