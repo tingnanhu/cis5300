@@ -354,12 +354,12 @@ def tune_hyperparameters(
 
     alpha_min = 0.05
     pi_min = 1e-4
-    pi_max = 0.0959
+    pi_max = 0.9
     learning_rate = 2e-5
     batch_size = 32
     epochs = 3
 
-    alpha_max_options = [0.5, 0.75, 0.9]
+    alpha_max_options = [0.6, 0.75, 0.9]
     gamma_options = [0.0, 2.0, 4.0]
     init_bias_options = [True, False]
     grad_clip_options = [1.0]
