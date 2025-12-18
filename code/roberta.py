@@ -555,7 +555,7 @@ def evaluate_model(
         log("\nUsing Per-Class Thresholds:")
         for label, t in zip(label_columns, thresholds):
             log(f"  {label}: threshold={t:.4f}")
-        else:
+    else:
         log("\nUsing Default Threshold: 0.5 for all classes.")
         binary_preds = (predictions >= 0.5).astype(int)
 
