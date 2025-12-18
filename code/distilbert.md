@@ -70,7 +70,7 @@ This will:
 
 ## Two Modes of Operation
 
-### Mode 1: Hyperparameter Tuning (Recommended)
+### Mode 1: Hyperparameter Tuning
 
 When you have a development set and want to find the best hyperparameters automatically:
 
@@ -85,7 +85,7 @@ python distilbert_weighted_focal.py \
 
 **What happens:**
 - The script tests multiple combinations of:
-  - `alpha_max`: [0.5, 0.75, 0.9]
+  - `alpha_max`: [0.6, 0.75, 0.9]
   - `gamma`: [0.0, 2.0, 4.0]
   - `init_bias`: [True, False]
 - For each combination, it:

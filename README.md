@@ -19,23 +19,33 @@ This project implements and evaluates multiple baseline models for multi-label t
 
 ```
 cis5300/
-├── cleaned/                    # Data splits
+├── code/                       # All training and evaluation scripts
+│   ├── simple_baseline.py      # Majority class baseline
+│   ├── simple_baseline.md      # Simple baseline documentation
+│   ├── strong_baseline.py      # DistilBERT baseline
+│   ├── strong_baseline.md      # Strong baseline documentation
+│   ├── distilbert.py           # DistilBERT with focal loss
+│   ├── distilbert.md           # DistilBERT documentation
+│   ├── roberta.py              # RoBERTa with focal loss
+│   ├── roberta.md              # RoBERTa documentation
+│   ├── score.py                # Evaluation script
+│   ├── score.md                # Evaluation metrics documentation
+│   └── README.md               # Step-by-step execution guide
+├── data/                       # Data files
 │   ├── train_split.csv         # Training data
 │   ├── dev_split.csv           # Development/validation data
-│   └── test_split.csv          # Test data
-├── results/                    # Model predictions and evaluation results
-│   ├── simple_baseline_predictions.csv
-│   ├── strong_baseline_predictions.csv
-│   └── RESULTS_SUMMARY.md      # Detailed results summary
+│   └── test_split.csv          # Test data (with gold labels)
+├── output/                     # Model predictions
+│   ├── roberta_tuned_pred.csv
+│   ├── distilbert_tuned_pred.csv
+│   ├── strong_baseline_pred.csv
+│   └── README.md               # Evaluation guide
+├── logs/                       # Training and tuning logs
+│   ├── hparam_tuning_roberta.log
+│   └── hparam_tuning_distilbert.log
 ├── reports/                    # Project reports and proposals
-├── simple-baseline.py          # Simple baseline implementation
-├── simple-baseline.md          # Simple baseline documentation
-├── strong_baseline.py          # Strong baseline implementation (DistilBERT)
-├── strong-baseline.md          # Strong baseline documentation
-├── score.py                    # Evaluation script
-├── scoring.md                  # Evaluation metric documentation
 ├── requirements.txt            # Python dependencies
-└── .gitignore                  # Git ignore file
+└── README.md                   # This file
 ```
 
 ## Installation
@@ -59,12 +69,27 @@ pip install -r requirements.txt
 
 ### Dependencies
 
+Install required packages:
+
+```bash
+pip install torch transformers pandas numpy scikit-learn tqdm
+```
+
+Or install from requirements file:
+
+```bash
+pip install -r requirements.txt
+```
+
+**Key dependencies:**
 - `pandas>=1.3.0` - Data manipulation
 - `numpy>=1.21.0` - Numerical operations
 - `scikit-learn>=1.0.0` - Machine learning utilities
 - `torch>=1.9.0` - PyTorch for deep learning models
 - `transformers>=4.20.0` - Hugging Face transformers library
 - `tqdm>=4.60.0` - Progress bars
+
+**GPU (recommended)**: Training transformer models is much faster on GPU. The scripts automatically detect and use GPU if available.
 
 ## Data Format
 
@@ -85,206 +110,186 @@ All data files are CSV format with the following columns:
 
 ### Data Splits
 
-- **Training set**: `cleaned/train_split.csv` (127,656 examples)
-- **Development set**: `cleaned/dev_split.csv` (15,959 examples)
-- **Test set**: `cleaned/test_split.csv`
+- **Training set**: `data/train_split.csv` - Training data with labels
+- **Development set**: `data/dev_split.csv` - Development/validation data with labels
+- **Test set**: `data/test_split.csv` - Test data with gold labels (for evaluation)
 
 ## Models
 
+This project implements four models for toxic comment classification:
+
 ### 1. Simple Baseline
 
-**Implementation**: `simple-baseline.py`
+**Implementation**: `code/simple_baseline.py`
 
-A majority class baseline that predicts the most common class for each toxic category based on training data distribution.
+A majority class baseline that predicts the most common class for each toxic category based on training data distribution. This serves as a lower bound for model performance.
 
-**Usage**:
-```bash
-python simple-baseline.py <train_file> <test_file> <output_file> [--dev-file <dev_file>]
-```
-
-**Example**:
-```bash
-python simple-baseline.py cleaned/train_split.csv cleaned/test_split.csv results/simple_baseline_predictions.csv --dev-file cleaned/dev_split.csv
-```
-
-**Performance**: Mean AUC-ROC ≈ 0.50 (random performance)
-
-**Documentation**: See `simple-baseline.md` for detailed documentation.
+**Documentation**: See `code/simple_baseline.md` for detailed documentation.
 
 ### 2. Strong Baseline
 
-**Implementation**: `strong_baseline.py`
+**Implementation**: `code/strong_baseline.py`
 
-A transformer-based baseline using fine-tuned DistilBERT (a distilled version of BERT) for toxic comment classification. DistilBERT is faster and smaller than BERT while maintaining most of its performance. The model uses focal loss to handle class imbalance and supports hyperparameter tuning.
+A transformer-based baseline using fine-tuned DistilBERT (a distilled version of BERT). DistilBERT is faster and smaller than BERT while maintaining most of its performance.
 
-**Usage**:
+**Documentation**: See `code/strong_baseline.md` for detailed documentation.
+
+### 3. DistilBERT with Focal Loss
+
+**Implementation**: `code/distilbert.py`
+
+DistilBERT model with focal loss to handle class imbalance. Supports automatic hyperparameter tuning and per-class threshold optimization.
+
+**Features:**
+- Focal loss with per-class alpha weighting
+- Configurable gamma parameter
+- Optional bias initialization
+- Automatic threshold optimization
+
+**Documentation**: See `code/distilbert.md` for detailed documentation.
+
+### 4. RoBERTa with Focal Loss
+
+**Implementation**: `code/roberta.py`
+
+RoBERTa model with focal loss. RoBERTa is a robustly optimized BERT that generally achieves better performance than BERT.
+
+**Features:**
+- Focal loss with per-class alpha weighting
+- Configurable gamma parameter
+- Dropout rate tuning
+- Optional bias initialization
+- Automatic threshold optimization
+
+**Documentation**: See `code/roberta.md` for detailed documentation.
+
+## Quick Start
+
+For step-by-step instructions to reproduce all results, see `code/README.md`.
+
+**Quick example:**
 ```bash
-python strong_baseline.py <train_file> <test_file> <output_file> [options]
+# Train RoBERTa with hyperparameter tuning
+python code/roberta.py \
+    data/train_split.csv \
+    data/test_split.csv \
+    output/roberta_tuned_pred.csv \
+    --dev-file data/dev_split.csv \
+    --tune
+
+# Evaluate predictions
+python code/score.py output/roberta_tuned_pred.csv
 ```
-
-**Example**:
-```bash
-# Basic usage
-python strong_baseline.py cleaned/train_split.csv cleaned/test_split.csv results/strong_baseline_predictions.csv
-
-# With dev set evaluation and best model saving
-python strong_baseline.py cleaned/train_split.csv cleaned/test_split.csv results/strong_baseline_predictions.csv --dev-file cleaned/dev_split.csv --save-best
-
-# With hyperparameter tuning
-python strong_baseline.py cleaned/train_split.csv cleaned/test_split.csv results/strong_baseline_predictions.csv --dev-file cleaned/dev_split.csv --tune
-```
-
-**Performance**: Mean AUC-ROC ≈ 0.99 on test set
-
-**Documentation**: See `strong-baseline.md` for detailed documentation including all command-line options, hyperparameter tuning, and checkpointing.
 
 ## Evaluation
 
-### Evaluation Metric
+### Evaluation Metrics
 
-The primary evaluation metric is **Mean Column-wise AUC-ROC** (Area Under the Receiver Operating Characteristic Curve). This metric:
+The primary evaluation metric is **Macro-F1** (macro-averaged F1 score across all labels). Additional metrics include:
 
-- Computes AUC-ROC separately for each of the six label columns
-- Averages the six scores to get a single metric
-- Is threshold-independent and handles class imbalance well
+- **Macro-Precision**: Macro-averaged precision
+- **Macro-Recall**: Macro-averaged recall
+- **Mean AUC-ROC**: Threshold-independent ranking metric
+- **Individual AUC-ROC scores**: Per-label scores for detailed analysis
 
-For more details, see `scoring.md`.
+For detailed metric definitions, see `code/score.md`.
 
 ### Running Evaluation
 
+The evaluation script (`code/score.py`) expects prediction files that contain both predictions and gold labels:
+
 ```bash
-python score.py <gold_file> <pred_file>
+python code/score.py <pred_file> [--thresholds THRESHOLDS]
 ```
 
 **Example**:
 ```bash
-python score.py cleaned/test_split.csv results/simple_baseline_predictions.csv
+# With default thresholds (0.5 for all labels)
+python code/score.py output/roberta_tuned_pred.csv
+
+# With custom per-class thresholds
+python code/score.py output/roberta_tuned_pred.csv \
+    --thresholds 0.5435,0.5204,0.5858,0.6002,0.5711,0.6004
 ```
-
-### Output
-
-The evaluation script outputs:
-- **Mean AUC-ROC**: Primary metric
-- **Macro-F1**: Macro-averaged F1 score
-- **Macro-Precision**: Macro-averaged precision
-- **Macro-Recall**: Macro-averaged recall
-- **Individual AUC-ROC scores**: Per-label scores
-- **Metrics JSON file**: `{pred_file}_metrics.json`
 
 **Example Output**:
 ```
-Mean AUC-ROC: 0.978787
-Macro-F1: 0.623456
-Macro-Precision: 0.712345
-Macro-Recall: 0.556789
+Macro-F1: 0.675037
+Macro-Precision: 0.743807
+Macro-Recall: 0.625995
+Mean AUC-ROC: 0.992377
 
 Individual AUC-ROC scores:
-  toxic: 0.967539
-  severe_toxic: 0.977336
-  obscene: 0.984031
-  threat: 0.987609
-  insult: 0.978092
-  identity_hate: 0.978117
+  toxic: 0.989006
+  severe_toxic: 0.991764
+  obscene: 0.995291
+  threat: 0.996380
+  insult: 0.989678
+  identity_hate: 0.992141
 
-Metrics saved to results/simple_baseline_predictions_metrics.json
+Metrics saved to output/roberta_tuned_pred_metrics.json
 ```
 
-## Results Summary
+The script saves all metrics to a JSON file: `{pred_file}_metrics.json`
 
-### Performance Comparison
+## Output Files
 
-| Baseline | Dev AUC-ROC | Test AUC-ROC | Improvement |
-|----------|-------------|--------------|-------------|
-| Simple (Majority Class) | 0.500000 | 0.500000 | Baseline |
-| Strong Baseline | - | 0.992305 | +98.5% |
+### Prediction Files
 
-### Key Findings
+Each model generates CSV files in the `output/` directory with:
+- `id`: Comment identifier
+- `toxic`, `severe_toxic`, `obscene`, `threat`, `insult`, `identity_hate`: Prediction probabilities (0.0 to 1.0)
+- `gold_toxic`, `gold_severe_toxic`, etc.: Gold standard labels (0 or 1) for evaluation
 
-1. **Simple Baseline**: Achieves random performance (AUC-ROC = 0.5), establishing a lower bound for model performance.
+### Metrics Files
 
-2. **Strong Baseline**: Achieves state-of-the-art performance (~0.99 AUC-ROC), showing the power of transformer-based models for toxic comment classification.
+The evaluation script generates JSON files with all metrics:
+- `{pred_file}_metrics.json`: Contains `macro_f1`, `macro_precision`, `macro_recall`, `mean_auc_roc`
 
-For detailed results, see `results/RESULTS_SUMMARY.md`.
+### Log Files
 
-## Usage Examples
+Training and tuning logs are saved to the `logs/` directory:
+- `hparam_tuning_roberta.log`: RoBERTa hyperparameter tuning results
+- `hparam_tuning_distilbert.log`: DistilBERT hyperparameter tuning results
+- `hparam_tuning.log`: General training logs
 
-### Running Simple Baseline
+## Documentation
 
-```bash
-# Basic usage
-python simple-baseline.py \
-    cleaned/train_split.csv \
-    cleaned/test_split.csv \
-    results/simple_baseline_predictions.csv
+### Code Documentation
 
-# With dev set evaluation
-python simple-baseline.py \
-    cleaned/train_split.csv \
-    cleaned/test_split.csv \
-    results/simple_baseline_predictions.csv \
-    --dev-file cleaned/dev_split.csv
-```
+- **`code/README.md`**: Step-by-step guide to reproduce all results
+- **`code/simple_baseline.md`**: Simple baseline documentation
+- **`code/strong_baseline.md`**: Strong baseline documentation
+- **`code/distilbert.md`**: DistilBERT model documentation
+- **`code/roberta.md`**: RoBERTa model documentation
+- **`code/score.md`**: Evaluation metrics documentation
 
-### Running Strong Baseline
+### Output Documentation
 
-```bash
-# Basic usage with default hyperparameters
-python strong_baseline.py \
-    cleaned/train_split.csv \
-    cleaned/test_split.csv \
-    results/strong_baseline_predictions.csv
+- **`output/README.md`**: Guide for evaluating prediction files
 
-# With dev set evaluation and best model saving
-python strong_baseline.py \
-    cleaned/train_split.csv \
-    cleaned/test_split.csv \
-    results/strong_baseline_predictions.csv \
-    --dev-file cleaned/dev_split.csv \
-    --save-best
+## Key Features
 
-# With hyperparameter tuning (requires dev set)
-python strong_baseline.py \
-    cleaned/train_split.csv \
-    cleaned/test_split.csv \
-    results/strong_baseline_predictions.csv \
-    --dev-file cleaned/dev_split.csv \
-    --tune
+### Hyperparameter Tuning
 
-# With custom hyperparameters
-python strong_baseline.py \
-    cleaned/train_split.csv \
-    cleaned/test_split.csv \
-    results/strong_baseline_predictions.csv \
-    --epochs 5 \
-    --batch-size 32 \
-    --learning-rate 3e-5
-```
+Both DistilBERT and RoBERTa models support automatic hyperparameter tuning:
+- Tests multiple combinations of `alpha_max`, `gamma`, `dropout_rate`, etc.
+- Selects best hyperparameters based on dev set Macro-F1
+- Saves test predictions for each combination
 
-### Evaluating Predictions
+### Threshold Optimization
 
-```bash
-# Evaluate simple baseline
-python score.py \
-    cleaned/test_split.csv \
-    results/simple_baseline_predictions.csv
+Models automatically compute optimal per-class thresholds:
+- Uses precision-recall curves on training data
+- Applies optimized thresholds to dev/test sets
+- Improves Macro-F1 performance significantly
 
-# Evaluate strong baseline
-python score.py \
-    cleaned/test_split.csv \
-    results/strong_baseline_predictions.csv
-```
+### Focal Loss
 
-## File Descriptions
-
-- **`simple-baseline.py`**: Implementation of majority class baseline
-- **`simple-baseline.md`**: Detailed documentation for simple baseline
-- **`strong_baseline.py`**: Implementation of DistilBERT-based strong baseline
-- **`strong-baseline.md`**: Detailed documentation for strong baseline including usage, hyperparameters, and checkpointing
-- **`score.py`**: Evaluation script for computing Mean AUC-ROC and other metrics
-- **`scoring.md`**: Documentation explaining the evaluation metric
-- **`requirements.txt`**: Python package dependencies
-- **`results/RESULTS_SUMMARY.md`**: Comprehensive results summary and analysis
-- **`.gitignore`**: Git ignore file for Python projects
+All transformer models use focal loss to handle class imbalance:
+- Per-class alpha weighting (automatically computed)
+- Configurable gamma parameter
+- Focuses learning on hard-to-classify examples
 
 ## References
 
@@ -298,12 +303,16 @@ python score.py \
 
 ## Notes
 
-- All prediction files are in CSV format with columns: `id`, `toxic`, `severe_toxic`, `obscene`, `threat`, `insult`, `identity_hate`
-- Simple baseline predictions are binary (0 or 1)
-- Strong baseline predictions are probabilities (0.0 to 1.0)
-- The evaluation script expects probabilities for optimal AUC-ROC computation, but will work with binary predictions
+- All models use random seed 42 for reproducibility
+- Training times vary significantly based on hardware (GPU strongly recommended)
+- Hyperparameter tuning can take 10+ hours depending on hardware
+- The best hyperparameters are selected based on dev set Macro-F1 score
+- Optimal thresholds are computed on training data and applied to dev/test sets
+- Prediction files contain both probabilities and gold labels for self-contained evaluation
 
 ## Contact
 
-For questions or issues, please refer to the course materials or contact the course instructor.
-
+serenagu@seas.upenn.edu
+ruohanz@seas.upenn.edu
+liuluyue@seas.upenn.edu
+tingnan@seas.upenn.edu

@@ -318,13 +318,6 @@ When using `--save-best`, the script saves:
 - `best_model.pt`: PyTorch checkpoint with best model state
 - `best_model_hf/`: Hugging Face format model and tokenizer (can be loaded with `from_pretrained()`)
 
-## Hardware Requirements
-
-- **GPU**: Recommended for training (CUDA-compatible GPU with at least 8GB VRAM)
-- **CPU**: Can run but will be significantly slower
-- **Memory**: At least 16GB RAM recommended
-- **Storage**: ~300MB for model checkpoints, ~500MB for pre-trained DistilBERT model
-
 ### Training Time Estimates
 
 - **Single epoch**: ~10-15 minutes on GPU (batch_size=16, ~128K training examples)
